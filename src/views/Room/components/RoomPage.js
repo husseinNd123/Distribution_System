@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Button,
@@ -9,39 +9,51 @@ import {
   Th,
   Td,
   useToast,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalCloseButton,
-  ModalBody,
-  ModalFooter,
   Spinner,
   Text,
-  Center,
   Flex,
+  Input,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
+  Switch,
+  HStack,
 } from "@chakra-ui/react";
-import { RepeatIcon } from '@chakra-ui/icons';
-import RoomForm from "./RoomForm";
+import {
+  MdEdit,
+  MdDelete,
+  MdDone,
+  MdCancel,
+  MdChevronLeft,
+  MdChevronRight,
+  MdAdd,
+} from "react-icons/md";
+import Card from "components/card/Card";
 
 const RoomPage = () => {
   const [rooms, setRooms] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingRoom, setEditingRoom] = useState(null);
+  const [filteredRooms, setFilteredRooms] = useState([]);
+  const [editableRoom, setEditableRoom] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newRoom, setNewRoom] = useState({ 
+    room_id: "", 
+    rows: 5, 
+    cols: 5, 
+    skip_rows: false 
+  });
+  const itemsPerPage = 5;
   const toast = useToast();
-  // Fetch rooms on component mount
-  useEffect(() => {
-    fetchRooms();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  const fetchRooms = async () => {
+
+  const fetchRooms = useCallback(async () => {
     setIsLoading(true);
-    setError(null);
+    setError("");
     try {
-      // Although not specified in the API docs, we assume there's an endpoint for listing all rooms
-      // If not, we could consider fetching known room IDs from a separate endpoint
       const response = await fetch(`${process.env.REACT_APP_API_URL}/rooms`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
@@ -66,67 +78,39 @@ const RoomPage = () => {
     } finally {
       setIsLoading(false);
     }
+  }, [toast]);
+
+  // Fetch rooms on component mount
+  useEffect(() => {
+    fetchRooms();
+  }, [fetchRooms]);
+
+  // Update filtered rooms when rooms or search query changes
+  useEffect(() => {
+    const filtered = rooms.filter((room) =>
+      room.room_id.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredRooms(filtered);
+    setCurrentPage(1); // Reset to first page when filtering
+  }, [rooms, searchQuery]);
+
+  const handleEditRoom = (room) => {
+    setEditableRoom({ ...room });
+    setIsAdding(false);
   };
 
-  const handleAddRoom = async (room) => {
-    setIsLoading(true);
-    setError(null);
+  const handleSaveRoom = async () => {
     try {
-      // Format room object according to API requirements
-      const roomData = {
-        room_id: room.room_id,
-        rows: Number(room.rows),
-        cols: Number(room.cols),
-        skip_rows: Boolean(room.skip_rows),
-      };
-
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/rooms`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-        body: JSON.stringify(roomData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.detail || "Failed to create room");
+      if (!editableRoom.room_id.trim()) {
+        setError("Room ID is required");
+        return;
       }
 
-      const newRoom = await response.json();
-
-      // Update state with the response from the API
-      setRooms((prev) => [...prev, newRoom]);
-
-      toast({
-        title: "Room created successfully!",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-    } catch (err) {
-      setError("Failed to create room: " + err.message);
-      toast({
-        title: "Error",
-        description: err.message || "Failed to create room",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };  const handleEditRoom = async (updatedRoom) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Format room object according to API requirements
       const roomData = {
-        room_id: updatedRoom.room_id,
-        rows: Number(updatedRoom.rows),
-        cols: Number(updatedRoom.cols),
-        skip_rows: Boolean(updatedRoom.skip_rows),
+        room_id: editableRoom.room_id,
+        rows: Number(editableRoom.rows),
+        cols: Number(editableRoom.cols),
+        skip_rows: Boolean(editableRoom.skip_rows),
       };
 
       const response = await fetch(`${process.env.REACT_APP_API_URL}/rooms/${roomData.room_id}`, {
@@ -148,10 +132,12 @@ const RoomPage = () => {
 
       const updatedRoomData = await response.json();
       
-      // Update state with the response from the API
       setRooms((prev) =>
         prev.map((room) => (room.room_id === updatedRoomData.room_id ? updatedRoomData : room))
       );
+      
+      setEditableRoom(null);
+      setError("");
       
       toast({
         title: "Room updated successfully!",
@@ -168,13 +154,17 @@ const RoomPage = () => {
         duration: 3000,
         isClosable: true,
       });
-    } finally {
-      setIsLoading(false);
     }
   };
+
+  const handleEditFormClose = () => {
+    setEditableRoom(null);
+    setIsAdding(false);
+    setNewRoom({ room_id: "", rows: 5, cols: 5, skip_rows: false });
+    setError("");
+  };
+
   const handleDeleteRoom = async (roomId) => {
-    setIsLoading(true);
-    setError(null);
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/rooms/${roomId}`, {
         method: 'DELETE',
@@ -191,8 +181,6 @@ const RoomPage = () => {
         throw new Error(errorData?.detail || "Failed to delete room");
       }
 
-      // For 204 No Content response, there's no body to parse
-      // Just update the UI by removing the deleted room
       setRooms((prev) => prev.filter((room) => room.room_id !== roomId));
       
       toast({
@@ -210,143 +198,395 @@ const RoomPage = () => {
         duration: 3000,
         isClosable: true,
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const openAddModal = () => {
-    setEditingRoom(null);
-    setIsModalOpen(true);
+  const handleAddRoom = () => {
+    setIsAdding(true);
+    setEditableRoom(null);
+    setError("");
   };
 
-  const openEditModal = async (room) => {
-    setIsLoading(true);
-    setError(null);
-    
+  const handleSaveNewRoom = async () => {
     try {
-      // Fetch the latest room data by ID before editing
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/rooms/${room.room_id}`, {
+      if (!newRoom.room_id.trim()) {
+        setError("Room ID is required");
+        return;
+      }
+
+      // Check for duplicate room ID
+      if (rooms.some(room => room.room_id === newRoom.room_id)) {
+        setError("Room ID already exists");
+        return;
+      }
+
+      const roomData = {
+        room_id: newRoom.room_id,
+        rows: Number(newRoom.rows),
+        cols: Number(newRoom.cols),
+        skip_rows: Boolean(newRoom.skip_rows),
+      };
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/rooms`, {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         },
+        body: JSON.stringify(roomData),
       });
 
       if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Room not found. It may have been deleted.");
-        }
-        throw new Error("Failed to fetch room details");
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.detail || "Failed to create room");
       }
 
-      const roomData = await response.json();
-      setEditingRoom(roomData);
-      setIsModalOpen(true);
+      const newRoomData = await response.json();
+      setRooms((prev) => [...prev, newRoomData]);
+      
+      setIsAdding(false);
+      setNewRoom({ room_id: "", rows: 5, cols: 5, skip_rows: false });
+      setError("");
+
+      toast({
+        title: "Room created successfully!",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
     } catch (err) {
-      setError(err.message);
+      setError("Failed to create room: " + err.message);
       toast({
         title: "Error",
-        description: err.message,
+        description: err.message || "Failed to create room",
         status: "error",
         duration: 3000,
         isClosable: true,
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-  };  return (
-    <Box>
-      <Flex mb={4} justify="space-between" align="center">
-        <Button colorScheme="blue" onClick={openAddModal}>
-          Add Room
-        </Button>
-      </Flex>
-      
-      {isLoading && (
-        <Center my={4}>
-          <Spinner size="xl" />
-        </Center>
-      )}
-      
+  const handleSearch = (event) => {
+    const query = event.target.value;
+    setSearchQuery(query);
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(currentPage + 1);
+  };
+
+  const handlePreviousPage = () => {
+    setCurrentPage(currentPage - 1);
+  };
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredRooms.slice(indexOfFirstItem, indexOfLastItem);
+
+  return (
+    <Card px="0px" boxShadow="xl" overflowX={{ sm: "scroll", lg: "hidden" }}>
       {error && (
-        <Text color="red.500" my={4} textAlign="center">
+        <Text color="#FF3B3B " textAlign="center" fontSize="lg" mb="4">
           {error}
         </Text>
       )}
-    
-      <Table variant="simple" color="gray.500" mb="24px">
-        <Thead position="sticky" top="0" zIndex="1" bg="blue" >
-          <Tr bg="blue" textColor="white">
-            <Th textColor="white">Room ID</Th>
-            <Th textColor="white">Rows</Th>
-            <Th textColor="white">Columns</Th>
-            <Th textColor="white">Skip Rows</Th>
-            <Th textColor="white">Actions</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {rooms.map((room) => (
-            <Tr key={room.room_id}>
-              <Td>{room.room_id}</Td>
-              <Td>{room.rows}</Td>
-              <Td>{room.cols}</Td>
-              <Td>{room.skip_rows ? "Yes" : "No"}</Td>
-              <Td>
-                <Button
-                  size="sm"
-                  colorScheme="yellow"
-                  onClick={() => openEditModal(room)}
-                  mr={2}
-                >
-                  Edit
-                </Button>
-                <Button
-                  size="sm"
-                  colorScheme="red"
-                  onClick={() => handleDeleteRoom(room.room_id)}
-                >
-                  Delete
-                </Button>
-              </Td>
-            </Tr>
-          ))}
-          {!isLoading && rooms.length === 0 && (
-            <Tr>
-              <Td colSpan={5} textAlign="center">No rooms found. Add a new room to get started.</Td>
-            </Tr>
-          )}
-        </Tbody>
-      </Table>
 
-      {/* Modal for Add/Edit Room */}
-      <Modal isOpen={isModalOpen} onClose={closeModal}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>{editingRoom ? "Edit Room" : "Add Room"}</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <RoomForm
-              initialData={editingRoom}
-              onSubmit={(room) => {
-                if (editingRoom) {
-                  handleEditRoom(room);
-                } else {
-                  handleAddRoom(room);
-                }
-                closeModal();
-              }}
-            />
-          </ModalBody>
-          <ModalFooter>
-            <Button onClick={closeModal}>Cancel</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </Box>
+      <Flex px="25px" justify="space-between" mb="20px" align="center">
+        <Text
+          color="gray.800"
+          fontSize="22px"
+          fontWeight="700"
+          lineHeight="100%"
+        >
+          Rooms
+        </Text>
+        <HStack spacing={2}>
+          <Input
+            placeholder="Search Rooms..."
+            value={searchQuery}
+            onChange={handleSearch}
+            size="sm"
+            w="200px"
+          />
+          <Button
+            leftIcon={<MdAdd />}
+            colorScheme="blue"
+            size="sm"
+            onClick={handleAddRoom}
+            disabled={isAdding || editableRoom}
+          >
+            Add Room
+          </Button>
+        </HStack>
+      </Flex>
+      
+      <Box overflowY="auto" maxHeight="400px">
+        {isLoading ? (
+          <Box textAlign="center" py="8">
+            <Spinner size="xl" />
+          </Box>
+        ) : (
+          <Table variant="simple" color="gray.500" mb="24px">
+            <Thead position="sticky" top="0" zIndex="1" bg="blue">
+              <Tr bg="blue" textColor="white">
+                <Th textColor="white">Index</Th>
+                <Th textColor="white">Room ID</Th>
+                <Th textColor="white">Rows</Th>
+                <Th textColor="white">Columns</Th>
+                <Th textColor="white">Skip Rows</Th>
+                <Th textColor="white">Total Seats</Th>
+                <Th textColor="white">Actions</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {/* Add new room row */}
+              {isAdding && (
+                <Tr bg="blue.50">
+                  <Td>New</Td>
+                  <Td>
+                    <Input
+                      value={newRoom.room_id}
+                      onChange={(e) => setNewRoom({...newRoom, room_id: e.target.value})}
+                      placeholder="Enter room ID"
+                      size="sm"
+                    />
+                  </Td>
+                  <Td>
+                    <NumberInput 
+                      size="sm" 
+                      min={1} 
+                      max={20}
+                      value={newRoom.rows}
+                      onChange={(value) => setNewRoom({...newRoom, rows: parseInt(value) || 1})}
+                    >
+                      <NumberInputField />
+                      <NumberInputStepper>
+                        <NumberIncrementStepper />
+                        <NumberDecrementStepper />
+                      </NumberInputStepper>
+                    </NumberInput>
+                  </Td>
+                  <Td>
+                    <NumberInput 
+                      size="sm" 
+                      min={1} 
+                      max={20}
+                      value={newRoom.cols}
+                      onChange={(value) => setNewRoom({...newRoom, cols: parseInt(value) || 1})}
+                    >
+                      <NumberInputField />
+                      <NumberInputStepper>
+                        <NumberIncrementStepper />
+                        <NumberDecrementStepper />
+                      </NumberInputStepper>
+                    </NumberInput>
+                  </Td>
+                  <Td>
+                    <Switch 
+                      isChecked={newRoom.skip_rows}
+                      onChange={(e) => setNewRoom({...newRoom, skip_rows: e.target.checked})}
+                      size="sm"
+                    />
+                  </Td>
+                  <Td>{newRoom.rows * newRoom.cols}</Td>
+                  <Td>
+                    <Flex>
+                      <Button
+                        leftIcon={<MdDone />}
+                        colorScheme="green"
+                        size="sm"
+                        onClick={handleSaveNewRoom}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        leftIcon={<MdCancel />}
+                        colorScheme="red"
+                        ml={2}
+                        size="sm"
+                        onClick={handleEditFormClose}
+                      >
+                        Cancel
+                      </Button>
+                    </Flex>
+                  </Td>
+                </Tr>
+              )}
+              
+              {/* Existing rooms */}
+              {currentItems.map((room, index) => (
+                <Tr key={room.room_id}>
+                  <Td>{indexOfFirstItem + index + 1}</Td>
+                  <Td>
+                    {editableRoom && editableRoom.room_id === room.room_id ? (
+                      <Input
+                        value={editableRoom.room_id}
+                        onChange={(e) => setEditableRoom({...editableRoom, room_id: e.target.value})}
+                        size="sm"
+                        disabled // Room ID should not be editable
+                      />
+                    ) : (
+                      room.room_id
+                    )}
+                  </Td>
+                  <Td>
+                    {editableRoom && editableRoom.room_id === room.room_id ? (
+                      <NumberInput 
+                        size="sm" 
+                        min={1} 
+                        max={20}
+                        value={editableRoom.rows}
+                        onChange={(value) => setEditableRoom({...editableRoom, rows: parseInt(value) || 1})}
+                      >
+                        <NumberInputField />
+                        <NumberInputStepper>
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
+                        </NumberInputStepper>
+                      </NumberInput>
+                    ) : (
+                      room.rows
+                    )}
+                  </Td>
+                  <Td>
+                    {editableRoom && editableRoom.room_id === room.room_id ? (
+                      <NumberInput 
+                        size="sm" 
+                        min={1} 
+                        max={20}
+                        value={editableRoom.cols}
+                        onChange={(value) => setEditableRoom({...editableRoom, cols: parseInt(value) || 1})}
+                      >
+                        <NumberInputField />
+                        <NumberInputStepper>
+                          <NumberIncrementStepper />
+                          <NumberDecrementStepper />
+                        </NumberInputStepper>
+                      </NumberInput>
+                    ) : (
+                      room.cols
+                    )}
+                  </Td>
+                  <Td>
+                    {editableRoom && editableRoom.room_id === room.room_id ? (
+                      <Switch 
+                        isChecked={editableRoom.skip_rows}
+                        onChange={(e) => setEditableRoom({...editableRoom, skip_rows: e.target.checked})}
+                        size="sm"
+                      />
+                    ) : (
+                      room.skip_rows ? "Yes" : "No"
+                    )}
+                  </Td>
+                  <Td>
+                    {editableRoom && editableRoom.room_id === room.room_id 
+                      ? editableRoom.rows * editableRoom.cols 
+                      : room.rows * room.cols
+                    }
+                  </Td>
+                  <Td>
+                    {editableRoom && editableRoom.room_id === room.room_id ? (
+                      <Flex>
+                        <Button
+                          leftIcon={<MdDone />}
+                          colorScheme="green"
+                          size="sm"
+                          onClick={handleSaveRoom}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          leftIcon={<MdCancel />}
+                          colorScheme="red"
+                          ml={2}
+                          size="sm"
+                          onClick={handleEditFormClose}
+                        >
+                          Cancel
+                        </Button>
+                      </Flex>
+                    ) : (
+                      <Flex>
+                        <Button
+                          leftIcon={<MdEdit />}
+                          colorScheme="blue"
+                          size="sm"
+                          onClick={() => handleEditRoom(room)}
+                          disabled={isAdding || editableRoom}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          leftIcon={<MdDelete />}
+                          colorScheme="red"
+                          size="sm"
+                          ml={2}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Are you sure you want to delete room ${room.room_id}?`
+                              )
+                            ) {
+                              handleDeleteRoom(room.room_id);
+                            }
+                          }}
+                          disabled={isAdding || editableRoom}
+                        >
+                          Delete
+                        </Button>
+                      </Flex>
+                    )}
+                  </Td>
+                </Tr>
+              ))}
+              
+              {!isLoading && currentItems.length === 0 && !isAdding && (
+                <Tr>
+                  <Td colSpan={7} textAlign="center" py={8}>
+                    {filteredRooms.length === 0 && searchQuery ? 
+                      "No rooms found matching your search." : 
+                      "No rooms added yet. Click 'Add Room' to get started."
+                    }
+                  </Td>
+                </Tr>
+              )}
+            </Tbody>
+          </Table>
+        )}
+      </Box>
+      
+      {/* Pagination */}
+      {filteredRooms.length > itemsPerPage && (
+        <Flex justify="space-between" alignItems="center" px="25px" mt="20px">
+          <Text color="gray.800">
+            Showing {indexOfFirstItem + 1} -{" "}
+            {Math.min(indexOfLastItem, filteredRooms.length)} of{" "}
+            {filteredRooms.length}
+          </Text>
+          <Flex>
+            <Button
+              leftIcon={<MdChevronLeft />}
+              colorScheme="blue"
+              size="sm"
+              onClick={handlePreviousPage}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <Button
+              leftIcon={<MdChevronRight />}
+              colorScheme="blue"
+              size="sm"
+              onClick={handleNextPage}
+              ml="2"
+              disabled={indexOfLastItem >= filteredRooms.length}
+            >
+              Next
+            </Button>
+          </Flex>
+        </Flex>
+      )}
+    </Card>
   );
 };
 

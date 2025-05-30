@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Box, 
   Button, 
@@ -53,32 +53,38 @@ import FileUpload from "./FileUpload";
 import Card from "components/card/Card";
 import ResultsTable from "./ResultsTable";
 import axios from "axios";
-import { useAssignment } from "contexts/AssignmentContext";
 
 const AssignmentInterface = () => {
-  const {
-    students,
-    setStudents,
-    rooms,
-    setRooms,
-    results,
-    setResults,
-    examRoomRestrictions,
-    setExamRoomRestrictions,
-    isLoading,
-    setIsLoading
-  } = useAssignment();
-
+  const [students, setStudents] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [results, setResults] = useState([]);  
   const [newRoom, setNewRoom] = useState({ room_id: "", rows: 5, cols: 5, skip_rows: false });
   const [editingRoom, setEditingRoom] = useState(null);
+  const [examRoomRestrictions, setExamRoomRestrictions] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
   const [isRoomsLoading, setIsRoomsLoading] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
   const [selectedExam, setSelectedExam] = useState("");
   const [selectedRoom, setSelectedRoom] = useState("");
 
-  // Memoize fetchRooms to prevent infinite re-renders
-  const fetchRooms = useCallback(async () => {
+  // Replace showAlert function to avoid ThemeProvider issues
+  const showAlert = (message, status = 'info') => {
+    // Use toast directly without any additional components
+    toast({
+      title: status === 'error' ? 'Error' : 
+             status === 'success' ? 'Success' : 
+             status === 'warning' ? 'Warning' : 'Info',
+      description: message,
+      status: status,
+      duration: 5000,
+      isClosable: true,
+      position: "top-right"
+    });
+  };
+
+  // Fetch rooms from the API
+  const fetchRooms = async () => {
     try {
       setIsRoomsLoading(true);
       const response = await fetch(`${process.env.REACT_APP_API_URL}/rooms`, {
@@ -95,32 +101,44 @@ const AssignmentInterface = () => {
 
       const roomsData = await response.json();
       setRooms(roomsData);
+      
+      // Use toast directly instead of showAlert to avoid ThemeProvider issues
+      // toast({
+      //   title: "Success",
+      //   description: "Rooms loaded successfully",
+      //   status: "success",
+      //   duration: 5000,
+      //   isClosable: true,
+      //   position: "top-right"
+      // });
     } catch (error) {
       console.error("Error fetching rooms:", error);
+      
+      // Use toast directly instead of showAlert
       toast({
         title: "Error",
         description: `Failed to load rooms: ${error.message}`,
         status: "error",
-        duration: 5000,  
+        duration: 5000,
         isClosable: true,
         position: "top-right"
       });
     } finally {
       setIsRoomsLoading(false);
     }
-  }, [setRooms, toast]); // Add dependencies for the callback
+  };
 
-  // Load rooms when component mounts
+  // Load rooms when the component mounts
   useEffect(() => {
     fetchRooms();
-  }, [fetchRooms]); // Now we can safely add fetchRooms as a dependency
+  }, []);
 
   const handleFileUpload = (data, type) => {
     if (type === "students") {
       // Parse student_id to integer
       const parsedData = data.map(student => ({
         ...student,
-        student_id: parseInt(student.student_id, 10)
+        student_id: parseInt(student.student_id, 10) // Convert student_id to integer
       }));
       setStudents(parsedData);
       console.log("Parsed Students data:", parsedData);
@@ -132,25 +150,13 @@ const AssignmentInterface = () => {
   const handleAddRoom = () => {
     // Validate room ID
     if (!newRoom.room_id.trim()) {
-      toast({
-        title: "Error",
-        description: "Room ID is required",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
+      showAlert("Room ID is required", "error");
       return;
     }
 
     // Check for duplicate room ID
     if (rooms.some(room => room.room_id === newRoom.room_id)) {
-      toast({
-        title: "Error",
-        description: "Room ID already exists",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
+      showAlert("Room ID already exists", "error");
       return;
     }
 
@@ -165,16 +171,8 @@ const AssignmentInterface = () => {
     // Update the rooms array with a new array
     setRooms(prevRooms => [...prevRooms, roomToAdd]);
     
-    // Reset the newRoom state
+    // Reset the newRoom state with a fresh object
     setNewRoom({ room_id: "", rows: 5, cols: 5, skip_rows: false });
-
-    toast({
-      title: "Success",
-      description: "Room added successfully",
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-    });
   };
 
   const handleEditRoom = (room) => {
@@ -186,57 +184,32 @@ const AssignmentInterface = () => {
   const handleUpdateRoom = () => {
     // Validate room ID
     if (!newRoom.room_id.trim()) {
-      toast({
-        title: "Error",
-        description: "Room ID is required",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
+      showAlert("Room ID is required", "error");
       return;
     }
 
     // Check for duplicate room ID (except for the current room)
     if (rooms.some(room => room.room_id === newRoom.room_id && room.room_id !== editingRoom.room_id)) {
-      toast({
-        title: "Error",
-        description: "Room ID already exists",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
+      showAlert("Room ID already exists", "error");
       return;
     }
 
-    setRooms(prevRooms => 
-      prevRooms.map(room => 
-        room.room_id === editingRoom.room_id ? {...newRoom} : room
-      )
+    const updatedRooms = rooms.map(room => 
+      room.room_id === editingRoom.room_id ? {...newRoom} : room
     );
     
+    setRooms(updatedRooms);
     setNewRoom({ room_id: "", rows: 5, cols: 5, skip_rows: false });
     setEditingRoom(null);
     onClose();
     
-    toast({
-      title: "Success",
-      description: "Room updated successfully",
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-    });
+    showAlert("Room updated successfully", "success");
   };
 
   const handleDeleteRoom = (roomId) => {
-    setRooms(prevRooms => prevRooms.filter(room => room.room_id !== roomId));
+    setRooms(rooms.filter(room => room.room_id !== roomId));
     
-    toast({
-      title: "Info",
-      description: "Room deleted",
-      status: "info",
-      duration: 3000,
-      isClosable: true,
-    });
+    showAlert("Room deleted", "info");
   };
 
   const handleAssignSeats = async () => {
@@ -305,21 +278,9 @@ const AssignmentInterface = () => {
       
       setResults(response.data.assignments);
       
-      toast({
-        title: "Success",
-        description: "Seat assignment was successful!",
-        status: "success",
-        duration: 5000,
-        isClosable: true,
-      });
+      showAlert("Seat assignment successful!", "success");
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || "An error occurred",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
+      showAlert(error.response?.data?.message || "An error occurred.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -337,7 +298,7 @@ const AssignmentInterface = () => {
     return Array.from(exams);
   };
   
-  // Update the exam room restrictions cleanup when student data changes
+  // Effect to clean up restrictions when student data changes
   useEffect(() => {
     // Don't do anything if no students
     if (students.length === 0) return;
@@ -364,9 +325,9 @@ const AssignmentInterface = () => {
       
       return changed ? currentRestrictions : prev;
     });
-  }, [students, setExamRoomRestrictions]);
+  }, [students]);
   
-  // Update the exam room restrictions cleanup when room data changes
+  // Effect to clean up restrictions when room data changes
   useEffect(() => {
     // Don't do anything if no rooms
     if (rooms.length === 0) return;
@@ -393,18 +354,12 @@ const AssignmentInterface = () => {
       
       return changed ? currentRestrictions : prev;
     });
-  }, [rooms, setExamRoomRestrictions]);
+  }, [rooms]);
 
   // Handle adding a room restriction for an exam
   const handleAddRestriction = () => {
     if (!selectedExam || !selectedRoom) {
-      toast({
-        title: "Warning",
-        description: "Please select both an exam and a room",
-        status: "warning",
-        duration: 3000,
-        isClosable: true,
-      });
+      showAlert("Please select both an exam and a room", "warning");
       return;
     }
 
@@ -412,13 +367,7 @@ const AssignmentInterface = () => {
       const currentRestrictions = prev[selectedExam] || [];
       // Check if restriction already exists
       if (currentRestrictions.includes(selectedRoom)) {
-        toast({
-          title: "Warning",
-          description: `Room ${selectedRoom} is already restricted for ${selectedExam}`,
-          status: "warning",
-          duration: 3000,
-          isClosable: true,
-        });
+        showAlert(`Room ${selectedRoom} is already restricted for ${selectedExam}`, "warning");
         return prev;
       }
 

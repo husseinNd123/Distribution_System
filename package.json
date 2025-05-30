@@ -1,6 +1,6 @@
 {
   "homepage": ".",
-  "name": "hisoft-agency",
+  "name": "distribution_system",
   "version": "2.0.0",
   "private": true,
   "dependencies": {
@@ -13,6 +13,8 @@
     "@emotion/styled": "^11.11.0",
     "@hypertheme-editor/chakra-ui": "^0.1.5",
     "@react-google-maps/api": "^2.19.3",
+    "ajv": "8.17.1",
+    "ajv-keywords": "5.1.0",
     "apexcharts": "3.35.2",
     "axios": "^1.7.2",
     "babel-cli": "^6.26.0",
