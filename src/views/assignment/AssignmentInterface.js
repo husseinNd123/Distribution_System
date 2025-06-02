@@ -46,31 +46,48 @@ import {
   StatHelpText,
   StatGroup,
   Checkbox,
-  CheckboxGroup
+  CheckboxGroup,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription
 } from "@chakra-ui/react";
 import { AddIcon, DeleteIcon, EditIcon, RepeatIcon } from "@chakra-ui/icons";
 import FileUpload from "./FileUpload";
 import Card from "components/card/Card";
 import ResultsTable from "./ResultsTable";
+import ReportExport from "./ReportExport";
+import { useAssignment } from "contexts/AssignmentContext";
 import axios from "axios";
 
-const AssignmentInterface = () => {
-  const [students, setStudents] = useState([]);
-  const [rooms, setRooms] = useState([]);
-  const [results, setResults] = useState([]);  
+const AssignmentInterface = () => {  // Use Assignment Context instead of local state
+  const {
+    students,
+    setStudents,
+    rooms,
+    setRooms,
+    results,
+    setResults,
+    examRoomRestrictions,
+    setExamRoomRestrictions,
+    isLoading,
+    setIsLoading,
+    assignmentTimestamp,
+    clearAssignmentData,
+    hasSavedResults,
+    getAssignmentSummary,
+    saveAssignmentTimestamp
+  } = useAssignment();
+
   const [newRoom, setNewRoom] = useState({ room_id: "", rows: 5, cols: 5, skip_rows: false });
   const [editingRoom, setEditingRoom] = useState(null);
-  const [examRoomRestrictions, setExamRoomRestrictions] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
   const [isRoomsLoading, setIsRoomsLoading] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
   const [selectedExam, setSelectedExam] = useState("");
-  const [selectedRoom, setSelectedRoom] = useState("");
-
-  // Replace showAlert function to avoid ThemeProvider issues
-  const showAlert = (message, status = 'info') => {
-    // Use toast directly without any additional components
+  const [selectedRoom, setSelectedRoom] = useState([]);
+  // Helper function to show toast notifications
+  const showToast = (message, status = 'info') => {
     toast({
       title: status === 'error' ? 'Error' : 
              status === 'success' ? 'Success' : 
@@ -141,75 +158,38 @@ const AssignmentInterface = () => {
         student_id: parseInt(student.student_id, 10) // Convert student_id to integer
       }));
       setStudents(parsedData);
-      console.log("Parsed Students data:", parsedData);
     } else if (type === "rooms") {
       setRooms(data);
     }
   };
-
-  const handleAddRoom = () => {
-    // Validate room ID
-    if (!newRoom.room_id.trim()) {
-      showAlert("Room ID is required", "error");
-      return;
-    }
-
-    // Check for duplicate room ID
-    if (rooms.some(room => room.room_id === newRoom.room_id)) {
-      showAlert("Room ID already exists", "error");
-      return;
-    }
-
-    // Create a fresh copy of the newRoom object
-    const roomToAdd = {
-      room_id: newRoom.room_id,
-      rows: parseInt(newRoom.rows) || 5,
-      cols: parseInt(newRoom.cols) || 5,
-      skip_rows: Boolean(newRoom.skip_rows)
-    };
-
-    // Update the rooms array with a new array
-    setRooms(prevRooms => [...prevRooms, roomToAdd]);
-    
-    // Reset the newRoom state with a fresh object
-    setNewRoom({ room_id: "", rows: 5, cols: 5, skip_rows: false });
-  };
-
-  const handleEditRoom = (room) => {
-    setEditingRoom(room);
-    setNewRoom({...room});
-    onOpen();
-  };
-
   const handleUpdateRoom = () => {
     // Validate room ID
     if (!newRoom.room_id.trim()) {
-      showAlert("Room ID is required", "error");
+      showToast("Room ID is required", "error");
       return;
     }
 
     // Check for duplicate room ID (except for the current room)
     if (rooms.some(room => room.room_id === newRoom.room_id && room.room_id !== editingRoom.room_id)) {
-      showAlert("Room ID already exists", "error");
+      showToast("Room ID already exists", "error");
       return;
     }
 
     const updatedRooms = rooms.map(room => 
       room.room_id === editingRoom.room_id ? {...newRoom} : room
     );
-    
-    setRooms(updatedRooms);
+      setRooms(updatedRooms);
     setNewRoom({ room_id: "", rows: 5, cols: 5, skip_rows: false });
     setEditingRoom(null);
     onClose();
     
-    showAlert("Room updated successfully", "success");
+    showToast("Room updated successfully", "success");
   };
-
+  
   const handleDeleteRoom = (roomId) => {
     setRooms(rooms.filter(room => room.room_id !== roomId));
     
-    showAlert("Room deleted", "info");
+    showToast("Room deleted", "info");
   };
 
   const handleAssignSeats = async () => {
@@ -273,14 +253,13 @@ const AssignmentInterface = () => {
       const response = await axios.post(`${apiUrl}/assignments/assign`, {
         students,
         rooms,
-        exam_room_restrictions: examRoomRestrictions
-      }, config);
+        exam_room_restrictions: examRoomRestrictions      }, config);
+        setResults(response.data.assignments);
+      saveAssignmentTimestamp(); // Save timestamp when assignment is successful
       
-      setResults(response.data.assignments);
-      
-      showAlert("Seat assignment successful!", "success");
+      showToast("Seat assignment successful!", "success");
     } catch (error) {
-      showAlert(error.response?.data?.message || "An error occurred.", "error");
+      showToast(error.response?.data?.message || "An error occurred.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -351,33 +330,37 @@ const AssignmentInterface = () => {
           }
         }
       });
-      
-      return changed ? currentRestrictions : prev;
+        return changed ? currentRestrictions : prev;
     });
   }, [rooms]);
-
+  
   // Handle adding a room restriction for an exam
   const handleAddRestriction = () => {
-    if (!selectedExam || !selectedRoom) {
-      showAlert("Please select both an exam and a room", "warning");
+    if (!selectedExam || !selectedRoom || (Array.isArray(selectedRoom) && selectedRoom.length === 0)) {
+      showToast("Please select both an exam and at least one room", "warning");
       return;
     }
 
+    // Ensure selectedRoom is always treated as an array
+    const roomsToAdd = Array.isArray(selectedRoom) ? selectedRoom : [selectedRoom];
+
     setExamRoomRestrictions(prev => {
       const currentRestrictions = prev[selectedExam] || [];
-      // Check if restriction already exists
-      if (currentRestrictions.includes(selectedRoom)) {
-        showAlert(`Room ${selectedRoom} is already restricted for ${selectedExam}`, "warning");
+        // Filter out rooms that are already in the restrictions
+      const newRooms = roomsToAdd.filter(room => !currentRestrictions.includes(room));
+      
+      if (newRooms.length === 0) {
+        showToast(`Selected room(s) are already restricted for ${selectedExam}`, "warning");
         return prev;
       }
 
       return {
         ...prev,
-        [selectedExam]: [...currentRestrictions, selectedRoom]
+        [selectedExam]: [...currentRestrictions, ...newRooms]
       };
     });
 
-    setSelectedRoom("");
+    setSelectedRoom([]);
   };
 
   // Handle removing a room restriction for an exam
@@ -399,10 +382,8 @@ const AssignmentInterface = () => {
       if (updatedRestrictions[exam].length === 0) {
         delete updatedRestrictions[exam];
       }
-      
-      return updatedRestrictions;
+        return updatedRestrictions;
     });
-  
   };
 
   // Function to calculate exam statistics
@@ -422,9 +403,34 @@ const AssignmentInterface = () => {
       uniqueExamCount: Object.keys(examCounts).length
     };
   };
-
   return (
     <Box mt={24}>
+      {/* Saved Results Banner */}
+      {hasSavedResults() && (
+        <Alert status="info" mb={6} borderRadius="md">
+          <AlertIcon />
+          <Box flex="1">
+            <AlertTitle>Assignment Results Available!</AlertTitle>
+            <AlertDescription>
+              You have saved assignment results from{" "}
+              {assignmentTimestamp && new Date(assignmentTimestamp).toLocaleString()}.{" "}
+              {getAssignmentSummary()?.totalStudents} students assigned to{" "}
+              {getAssignmentSummary()?.totalRooms} rooms for{" "}
+              {getAssignmentSummary()?.totalExams} exams.
+            </AlertDescription>
+          </Box>
+          <Button
+            size="sm"
+            colorScheme="red"
+            variant="outline"
+            onClick={clearAssignmentData}
+            ml={3}
+          >
+            Clear Results
+          </Button>
+        </Alert>
+      )}
+      
       <VStack mt={24} spacing={6} align="stretch">
         {/* Students Section */}
         <Box>
@@ -603,7 +609,7 @@ const AssignmentInterface = () => {
                   colorScheme="blue" 
                   onClick={handleAddRestriction}
                   alignSelf="flex-end"
-                  isDisabled={!selectedExam || !selectedRoom || isLoading}
+                  isDisabled={!selectedExam || !selectedRoom || (Array.isArray(selectedRoom) && selectedRoom.length === 0) || isLoading}
                 >
                   <AddIcon />
                 </Button>
@@ -674,9 +680,7 @@ const AssignmentInterface = () => {
           )}
         </Box>
 
-        <Divider />
-
-        {/* Action Buttons */}
+        <Divider />        {/* Action Buttons */}
         <Box>
           <HStack spacing={4}>
             <Button 
@@ -684,88 +688,37 @@ const AssignmentInterface = () => {
               size="lg" 
               onClick={handleAssignSeats} 
               isDisabled={!students.length || !rooms.length || isLoading}
-              w="100%"
+              flex={1}
               isLoading={isLoading}
               loadingText="Assigning..."
             >
               Assign Seats
             </Button>
+            
+            {hasSavedResults() && (
+              <Button 
+                colorScheme="gray" 
+                variant="outline"
+                size="lg"
+                onClick={clearAssignmentData}
+                isDisabled={isLoading}
+              >
+                New Assignment
+              </Button>
+            )}
           </HStack>
-        </Box>
-
-        {/* Results Table */}
+        </Box>{/* Results Table */}
         {results.length > 0 && <ResultsTable results={results} rooms={rooms} />}
+        
+        {/* Report Export Section */}
+        {results.length > 0 && (
+          <>
+            <Divider />
+            <ReportExport results={results} rooms={rooms} students={students} />
+          </>
+        )}
       </VStack>
 
-      {/* Edit Room Modal */}
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Edit Room</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <FormControl mb={4}>
-              <FormLabel>Room ID</FormLabel>
-              <Input 
-                value={newRoom.room_id} 
-                onChange={(e) => setNewRoom({...newRoom, room_id: e.target.value})}
-                placeholder="Enter room ID"
-              />
-            </FormControl>
-            
-            <FormControl mb={4}>
-              <FormLabel>Rows</FormLabel>
-              <NumberInput 
-                min={1} 
-                max={20}
-                value={newRoom.rows} 
-                onChange={(value) => setNewRoom({...newRoom, rows: parseInt(value)})}
-              >
-                <NumberInputField />
-                <NumberInputStepper>
-                  <NumberIncrementStepper />
-                  <NumberDecrementStepper />
-                </NumberInputStepper>
-              </NumberInput>
-            </FormControl>
-            
-            <FormControl mb={4}>
-              <FormLabel>Columns</FormLabel>
-              <NumberInput 
-                min={1} 
-                max={20}
-                value={newRoom.cols} 
-                onChange={(value) => setNewRoom({...newRoom, cols: parseInt(value)})}
-              >
-                <NumberInputField />
-                <NumberInputStepper>
-                  <NumberIncrementStepper />
-                  <NumberDecrementStepper />
-                </NumberInputStepper>
-              </NumberInput>
-            </FormControl>
-            
-            <FormControl display="flex" alignItems="center">
-              <FormLabel mb="0">
-                Skip Rows
-              </FormLabel>
-              <Switch 
-                isChecked={newRoom.skip_rows} 
-                onChange={(e) => setNewRoom({...newRoom, skip_rows: e.target.checked})}
-              />
-            </FormControl>
-          </ModalBody>
-
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onClose}>
-              Cancel
-            </Button>
-            <Button colorScheme="blue" onClick={handleUpdateRoom}>
-              Save Changes
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
     </Box>
   );
 };

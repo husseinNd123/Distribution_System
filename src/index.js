@@ -7,7 +7,6 @@ import AdminLayout from 'layouts/admin';
 import RtlLayout from 'layouts/rtl';
 import { ChakraProvider } from '@chakra-ui/react';
 import theme from 'theme/theme';
-import { ThemeEditorProvider } from '@hypertheme-editor/chakra-ui';
 import { AssignmentProvider } from 'contexts/AssignmentContext';
 
 const accessToken = localStorage.getItem('accessToken');
@@ -17,16 +16,14 @@ ReactDOM.render(
     <ChakraProvider theme={theme}>
         <React.StrictMode>
             <AssignmentProvider>
-                <ThemeEditorProvider>
-                    <HashRouter>
-                        <Switch>
-                            <Route path={`/auth`} component={AuthLayout} />
-                            <Route path={`/admin`} component={AdminLayout} />
-                            <Route path={`/rtl`} component={RtlLayout} />
-                            <Redirect from='/' to={initialRoute} />
-                        </Switch>
-                    </HashRouter>
-                </ThemeEditorProvider>
+                <HashRouter>
+                    <Switch>
+                        <Route path={`/auth`} component={AuthLayout} />
+                        <Route path={`/admin`} component={AdminLayout} />
+                        <Route path={`/rtl`} component={RtlLayout} />
+                        <Redirect from='/' to={initialRoute} />
+                    </Switch>
+                </HashRouter>
             </AssignmentProvider>
         </React.StrictMode>
     </ChakraProvider>,

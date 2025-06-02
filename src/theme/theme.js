@@ -10,16 +10,35 @@ import { switchStyles } from "./components/switch";
 import { linkStyles } from "./components/link";
 import { breakpoints } from "./foundations/breakpoints";
 import { globalStyles } from "./styles";
-export default extendTheme(
-  { breakpoints }, // Breakpoints
-  globalStyles,
-  badgeStyles, // badge styles
-  buttonStyles, // button styles
-  linkStyles, // link styles
-  progressStyles, // progress styles
-  sliderStyles, // slider styles
-  inputStyles, // input styles
-  textareaStyles, // textarea styles
-  switchStyles, // switch styles
-  CardComponent // card component
-);
+
+// Create a deep copy function to prevent read-only issues
+const deepClone = (obj) => {
+  if (obj === null || typeof obj !== "object") return obj;
+  if (obj instanceof Date) return new Date(obj);
+  if (obj instanceof Array) return obj.map(item => deepClone(item));
+  if (typeof obj === "object") {
+    const clonedObj = {};
+    for (let key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        clonedObj[key] = deepClone(obj[key]);
+      }
+    }
+    return clonedObj;
+  }
+};
+
+const themeConfig = {
+  breakpoints: deepClone(breakpoints),
+  ...deepClone(globalStyles),
+  ...deepClone(badgeStyles),
+  ...deepClone(buttonStyles),
+  ...deepClone(linkStyles),
+  ...deepClone(progressStyles),
+  ...deepClone(sliderStyles),
+  ...deepClone(inputStyles),
+  ...deepClone(textareaStyles),
+  ...deepClone(switchStyles),
+  ...deepClone(CardComponent)
+};
+
+export default extendTheme(themeConfig);

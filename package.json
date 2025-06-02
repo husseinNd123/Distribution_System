@@ -18,6 +18,7 @@
     "apexcharts": "3.35.2",
     "axios": "^1.7.2",
     "babel-cli": "^6.26.0",
+    "cross-env": "^7.0.3",
     "file-saver": "^2.0.5",
     "framer-motion": "^5.6.0",
     "jspdf": "^2.5.2",
@@ -39,7 +40,7 @@
     "xlsx": "^0.18.5"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "cross-env PORT=10000 react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
