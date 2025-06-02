@@ -74,8 +74,8 @@ const ReportExport = ({ results, rooms, students }) => {
     
     // Get statistics
     const totalStudents = allStudentsData.length;
-    const englishStudents = allStudentsData.filter(s => s.language === 'English').length;
-    const frenchStudents = allStudentsData.filter(s => s.language === 'French').length;
+    const englishStudents = allStudentsData.filter(s => s.language === 'english').length;
+    const frenchStudents = allStudentsData.filter(s => s.language === 'french').length;
     
     // Group by exam for statistics
     const examStats = {};
@@ -128,9 +128,9 @@ const ReportExport = ({ results, rooms, students }) => {
       }
       
       subjectRoomData[exam][roomId].count++;
-      if (studentLanguage === 'English') {
+      if (studentLanguage === 'english') {
         subjectRoomData[exam][roomId].englishCount++;
-      } else if (studentLanguage === 'French') {
+      } else if (studentLanguage === 'french') {
         subjectRoomData[exam][roomId].frenchCount++;
       }
       
@@ -166,8 +166,8 @@ const ReportExport = ({ results, rooms, students }) => {
     const totalStudents = results.length;
     const totalExams = Object.keys(subjectRoomData).length;
     const totalRooms = [...new Set(results.map(r => r.room_id))].length;
-    const englishStudents = results.filter(r => getStudentLanguage(r.student_id) === 'English').length;
-    const frenchStudents = results.filter(r => getStudentLanguage(r.student_id) === 'French').length;
+    const englishStudents = results.filter(r => getStudentLanguage(r.student_id) === 'english').length;
+    const frenchStudents = results.filter(r => getStudentLanguage(r.student_id) === 'french').length;
 
     return {
       distributionData,
@@ -393,8 +393,8 @@ const ReportExport = ({ results, rooms, students }) => {
                       <td style="border: 1px solid #000; padding: 8px; text-align: center; height: 40px;">&nbsp;</td>
                       <td style="border: 1px solid #000; padding: 8px; text-align: center; height: 40px;">&nbsp;</td>
                       <td style="border: 1px solid #000; padding: 8px; text-align: center;">
-                        ${item.englishCount > 0 && item.frenchCount > 0 ? 'English/French' : 
-                          item.englishCount > 0 ? 'English' : 'French'}
+                        ${item.englishCount > 0 && item.frenchCount > 0 ? 'english/french' : 
+                          item.englishCount > 0 ? 'english' : 'french'}
                       </td>
                       <td style="border: 1px solid #000; padding: 8px; text-align: center;">${item.totalCount}</td>
                       <td style="border: 1px solid #000; padding: 8px; text-align: center;">${item.exam}</td>
@@ -499,8 +499,8 @@ const ReportExport = ({ results, rooms, students }) => {
                   <th style="border: 1px solid #000; padding: 8px;">Room</th>
                   <th style="border: 1px solid #000; padding: 8px;">Subject</th>
                   <th style="border: 1px solid #000; padding: 8px;">Total</th>
-                  <th style="border: 1px solid #000; padding: 8px;">English</th>
-                  <th style="border: 1px solid #000; padding: 8px;">French</th>
+                  <th style="border: 1px solid #000; padding: 8px;">english</th>
+                  <th style="border: 1px solid #000; padding: 8px;">french</th>
                   <th style="border: 1px solid #000; padding: 8px;">Professor</th>
                   <th style="border: 1px solid #000; padding: 8px;">Notes</th>
                 </tr>
@@ -529,8 +529,8 @@ const ReportExport = ({ results, rooms, students }) => {
             <h2 style="text-align: center; margin-bottom: 20px;">Detailed Student Grid Report</h2>
             <div style="text-align: center; margin-bottom: 20px;">
               <strong>Total Students:</strong> ${reportData.totalStudents} | 
-              <strong>English:</strong> ${reportData.englishStudents} | 
-              <strong>French:</strong> ${reportData.frenchStudents}
+              <strong>english:</strong> ${reportData.englishStudents} | 
+              <strong>french:</strong> ${reportData.frenchStudents}
             </div>
             <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 20px;">
               ${(reportData.students || []).map(student => `
@@ -731,8 +731,8 @@ const ReportExport = ({ results, rooms, students }) => {
                       <Td textAlign="center" border="1px solid" borderColor="black"></Td>
                       <Td textAlign="center" border="1px solid" borderColor="black"></Td>
                       <Td textAlign="center" border="1px solid" borderColor="black">
-                        {item.englishCount > 0 && item.frenchCount > 0 ? 'English/French' : 
-                         item.englishCount > 0 ? 'English' : 'French'}
+                        {item.englishCount > 0 && item.frenchCount > 0 ? 'english/french' : 
+                         item.englishCount > 0 ? 'english' : 'french'}
                       </Td>
                       <Td textAlign="center" border="1px solid" borderColor="black">{item.totalCount}</Td>
                       <Td textAlign="center" border="1px solid" borderColor="black">{item.exam}</Td>
@@ -752,8 +752,8 @@ const ReportExport = ({ results, rooms, students }) => {
                 
                 <VStack align="end">
                   <Text fontWeight="bold">Language Distribution:</Text>
-                  <Text fontSize="sm">English: {reportData.englishStudents}</Text>
-                  <Text fontSize="sm">French: {reportData.frenchStudents}</Text>
+                  <Text fontSize="sm">english: {reportData.englishStudents}</Text>
+                  <Text fontSize="sm">french: {reportData.frenchStudents}</Text>
                 </VStack>
               </HStack>
             </Card>
@@ -894,8 +894,8 @@ const ReportExport = ({ results, rooms, students }) => {
                 </VStack>
                 <VStack align="end" spacing={1}>
                   <Text fontWeight="bold" fontSize="sm">Languages:</Text>
-                  <Text fontSize="xs">English: {reportData.englishStudents}</Text>
-                  <Text fontSize="xs">French: {reportData.frenchStudents}</Text>
+                  <Text fontSize="xs">english: {reportData.englishStudents}</Text>
+                  <Text fontSize="xs">french: {reportData.frenchStudents}</Text>
                 </VStack>
               </HStack>
             </Card>
@@ -930,8 +930,8 @@ const ReportExport = ({ results, rooms, students }) => {
                 <VStack spacing={1}>
                   <Text fontWeight="bold" fontSize="sm">Students</Text>
                   <Text fontSize="xs">Total: {reportData.totalStudents}</Text>
-                  <Text fontSize="xs">English: {reportData.englishStudents}</Text>
-                  <Text fontSize="xs">French: {reportData.frenchStudents}</Text>
+                  <Text fontSize="xs">english: {reportData.englishStudents}</Text>
+                  <Text fontSize="xs">french: {reportData.frenchStudents}</Text>
                 </VStack>
                 
                 <VStack spacing={1}>
@@ -1053,9 +1053,9 @@ const ReportExport = ({ results, rooms, students }) => {
       }
       
       subjectRoomData[exam][roomId].count++;
-      if (studentLanguage === 'English') {
+      if (studentLanguage === 'english') {
         subjectRoomData[exam][roomId].englishCount++;
-      } else if (studentLanguage === 'French') {
+      } else if (studentLanguage === 'french') {
         subjectRoomData[exam][roomId].frenchCount++;
       }
       
@@ -1095,8 +1095,8 @@ const ReportExport = ({ results, rooms, students }) => {
     const totalStudents = results.length;
     const totalExams = Object.keys(subjectRoomData).length;
     const totalRooms = [...new Set(results.map(r => r.room_id))].length;
-    const englishStudents = results.filter(r => getStudentLanguage(r.student_id) === 'English').length;
-    const frenchStudents = results.filter(r => getStudentLanguage(r.student_id) === 'French').length;
+    const englishStudents = results.filter(r => getStudentLanguage(r.student_id) === 'english').length;
+    const frenchStudents = results.filter(r => getStudentLanguage(r.student_id) === 'french').length;
 
     return {
       distributionData,
@@ -1139,8 +1139,8 @@ const ReportExport = ({ results, rooms, students }) => {
     
     // Get statistics
     const totalStudents = allStudentsData.length;
-    const englishStudents = allStudentsData.filter(s => s.language === 'English').length;
-    const frenchStudents = allStudentsData.filter(s => s.language === 'French').length;
+    const englishStudents = allStudentsData.filter(s => s.language === 'english').length;
+    const frenchStudents = allStudentsData.filter(s => s.language === 'french').length;
     
     // Group by exam for statistics
     const examStats = {};
