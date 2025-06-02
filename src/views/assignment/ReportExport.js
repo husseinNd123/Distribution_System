@@ -1195,10 +1195,10 @@ const ReportExport = ({ results, rooms, students }) => {
             >
               <option value="student-distribution-by-id">توزيع الطلاب حسب تسلسل الأرقام</option>
               <option value="subject-room-distribution">توزيع المواد على القاعات</option>
-              <option value="student-id-grid">Student ID Grid Report (Image 1)</option>
-              <option value="room-attendance">Room Attendance Report (Image 2)</option>
-              <option value="enhanced-subject-distribution">Enhanced Subject Distribution (Image 3 & 5)</option>
-              <option value="detailed-student-grid">Detailed Student Grid (Image 4)</option>
+              <option value="student-id-grid">Student ID Grid Report </option>
+              <option value="room-attendance">Room Attendance Report </option>
+              <option value="enhanced-subject-distribution">Enhanced Subject Distribution </option>
+              <option value="detailed-student-grid">Detailed Student Grid</option>
             </Select><HStack spacing={2}>              <Button
                 colorScheme="blue"
                 leftIcon={<ViewIcon />}
