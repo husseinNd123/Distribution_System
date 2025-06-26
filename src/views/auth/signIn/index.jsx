@@ -17,7 +17,7 @@ import {
 import { MdOutlineRemoveRedEye } from 'react-icons/md';
 import { RiEyeCloseLine } from 'react-icons/ri';
 import DefaultAuth from 'layouts/auth/types/Default';
-import illustration from 'assets/img/auth/auth.png';
+import illustration from 'assets/img/auth/red.jpg';
 
 const SignIn = () => {
   // Rename username state to email to better reflect the API requirement
