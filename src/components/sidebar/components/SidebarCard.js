@@ -61,24 +61,9 @@ export default function SidebarDocs() {
           mb="6px"
           textAlign="center"
         >
-          Developed By Hussein Noureddine, Majid, Barakat 
+          Developed By Hussein Noureddine, Majid Onaisy, Mohammad Barakat 
         </Text>
       </Flex>
-      <Link href="https://Hisoftlb.com">
-        <Button
-          bg="whiteAlpha.300"
-          _hover={{ bg: "whiteAlpha.200" }}
-          _active={{ bg: "whiteAlpha.100" }}
-          mb={{ sm: "16px", xl: "24px" }}
-          color={"white"}
-          fontWeight="regular"
-          fontSize="sm"
-          minW="185px"
-          mx="auto"
-        >
-          Contact Us
-        </Button>
-      </Link>
     </Flex>
   );
 }

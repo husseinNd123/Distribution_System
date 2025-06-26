@@ -2,14 +2,10 @@ import React from "react";
 import { Icon } from "@chakra-ui/react";
 import {
   MdPerson,
-  MdHome,
   MdLock,
-  MdSettings,
   MdPermContactCalendar,
-  MdWorkspacePremium,
 } from "react-icons/md";
 // Admin Imports
-import MainDashboard from "views/admin/default";
 import Profile from "views/admin/profile";
 import Rooms from "views/Room/index";
 import AssignmentInterface from "views/assignment/AssignmentInterface";
@@ -19,13 +15,6 @@ import Permission from "views/admin/Permission";
 // Auth Imports
 import SignInCentered from "views/auth/signIn";
 const routes = [
-  // {
-  //   name: "Main Dashboard",
-  //   layout: "/admin",
-  //   path: "/Default",
-  //   icon: <Icon as={MdHome} width="20px" height="20px" color="inherit" />,
-  //   component: MainDashboard,
-  // },
   {
     name: "Profile",
     layout: "/admin",
